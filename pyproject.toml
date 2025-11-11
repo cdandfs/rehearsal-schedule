@@ -1,0 +1,12 @@
+[project]
+name = "cdfs-performance-rehearsal"
+version = "0.1.0"
+description = "Streamlit application for CDF&S May Performance/Rehearsal Helper"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "streamlit>=1.45.1",
+    "tabulate>=0.9.0",
+]
