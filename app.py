@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, time
 
+#
 st.set_page_config(
     page_title="Rehearsal Helper", page_icon="https://www.cdandfs.com/favicon.ico"
 )
@@ -40,6 +41,7 @@ if class_name:
                     "assistant": "Assistant",
                     "day_of_week": "Class Day of Week",
                     "time_of_day": "Class Time",
+                    "costume": "Costume Information",
                 }
             ),
             use_container_width=True,
