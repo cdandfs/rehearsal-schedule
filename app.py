@@ -12,7 +12,7 @@ classes_data = pd.read_excel("input.xlsx", sheet_name="classes")
 rehearsals_data = pd.read_excel("input.xlsx", sheet_name="rehearsals")
 
 # Main app
-st.title("CDF&S May Performance Rehearsal Helper")
+st.title("CDF&S May Rehearsals and Performances")
 
 # Get user input for class name
 class_name_list = classes_data["class_name"].unique()
@@ -42,6 +42,7 @@ if class_name:
                     "day_of_week": "Class Day of Week",
                     "time_of_day": "Class Time",
                     "costume": "Costume Information",
+                    "dressing_room": "Dressing Room Assignment"
                 }
             ),
             use_container_width=True,
