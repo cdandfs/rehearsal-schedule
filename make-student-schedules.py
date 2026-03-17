@@ -1,147 +1,376 @@
+"""
+make-student-schedules.py
+Generates one landscape PDF per student by joining three input sources:
+
+  input.xlsx  "classes"   tab  →  class metadata (teacher, day, costume…)
+  input.xlsx  "rehearsals" tab →  all rehearsal / performance calls
+  class-rosters.xlsx  "roster" tab  →  which students are in which class
+
+The join logic is:
+    roster.class_name  →  classes.class_name  (get teacher, day, costume)
+    roster.class_name  →  rehearsals.class_name  (get calls for that class)
+
+One PDF is written per student containing:
+    • their enrolled classes (with teacher, day/time, costume)
+    • every rehearsal / performance call across all their classes
+
+Dependencies:
+    pip install weasyprint jinja2 pandas openpyxl
+
+Usage:
+    python make-student-schedules.py
+    python make-student-schedules.py --schedule input.xlsx \\
+                                     --rosters  class-rosters.xlsx \\
+                                     --output-dir output/ \\
+                                     --templates templates/
+"""
+
+import argparse
+import re
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
-import os
-from tabulate import tabulate
-from datetime import time
+from jinja2 import Environment, FileSystemLoader
 
-# Read in input.xlsx
-classes_data = pd.read_excel("input.xlsx", sheet_name="classes")
-rehearsals_data = pd.read_excel("input.xlsx", sheet_name="rehearsals")
-
-# Read in class-rosters.xlsx
-class_rosters = pd.read_excel("class-rosters.xlsx")
-
-# Create a folder to store the student schedules
-if not os.path.exists("student-schedules"):
-    os.makedirs("student-schedules")
-
-# Loop through each unique student in the class-rosters file
-for student in class_rosters["student"].unique():
-
-    print(student)
-
-    # Filter the class-rosters data to get the classes for this student
-    student_classes = (
-        class_rosters[class_rosters["student"] == student]["class_name"]
-        .str.lower()
-        .tolist()
-    )
-
-    # Filter the classes_data to get the classes for this student
-    student_classes_data = classes_data[
-        classes_data["class_name"].str.lower().isin(student_classes)
-    ]
-
-    if student_classes_data.empty:
-        continue
-
-    # Filter the rehearsals_data to get the rehearsals for this student
-    student_rehearsals_data = rehearsals_data[
-        rehearsals_data["class_name"].str.lower().isin(student_classes)
-    ]
-
-    if student_rehearsals_data.empty:
-        continue
-
-    student_rehearsals_data.sort_values(by=["date", "start_time"], inplace=True)
-
-    # Add the URL to the name field in the rehearsals data
-    student_rehearsals_data["name"] = student_rehearsals_data.apply(
-        lambda row: f"[{row['name']}]({row['url']})" if row["url"] else row["name"],
-        axis=1,
-    )
-
-    student_classes_data = student_classes_data.rename(
-        columns={
-            "class_name": "Class",
-            "teacher": "Teacher",
-            "assistant": "Assistant",
-            "day_of_week": "Day",
-            "time_of_day": "Time",
+# ── PDF backend ────────────────────────────────────────────────────────────
+try:
+    import weasyprint
+    def _html_to_pdf(html_string: str, dest_path: str) -> None:
+        weasyprint.HTML(string=html_string).write_pdf(dest_path)
+    PDF_BACKEND = "weasyprint"
+except ImportError:
+    try:
+        import pdfkit
+        _PDFKIT_OPTIONS = {
+            "page-size":    "Letter",
+            "orientation":  "Landscape",
+            "margin-top":    "0.45in",
+            "margin-bottom": "0.45in",
+            "margin-left":   "0.55in",
+            "margin-right":  "0.55in",
+            "enable-local-file-access": "",
+            "enable-external-links": "",
+            "quiet": "",
         }
-    )
-
-    student_classes_data.loc[:, "Time"] = student_classes_data.loc[:, "Time"].apply(
-        lambda x: x.strftime("%I:%M %p") if pd.notnull(x) else ""
-    )
-
-    student_classes_data["Teacher"] = student_classes_data["Teacher"].fillna("")
-    student_classes_data["Assistant"] = student_classes_data["Assistant"].fillna("")
-    student_classes_data["Day"] = student_classes_data["Day"].fillna("")
-
-    # Rehearsal data
-    student_rehearsals_data.loc[:, "Date"] = student_rehearsals_data.loc[
-        :, "date"
-    ].apply(lambda x: x.strftime("%a, %b %d"))
-    student_rehearsals_data.loc[:, "Start Time"] = student_rehearsals_data.loc[
-        :, "start_time"
-    ].apply(lambda x: x.strftime("%I:%M %p"))
-    student_rehearsals_data.loc[:, "End Time"] = student_rehearsals_data.loc[
-        :, "end_time"
-    ].apply(lambda x: x.strftime("%I:%M %p"))
-    student_rehearsals_data.loc[:, "Arrival Time"] = student_rehearsals_data.loc[
-        :, "arrival_time"
-    ].apply(lambda x: x.strftime("%I:%M %p") if isinstance(x, time) else "")
-    student_rehearsals_data = student_rehearsals_data[
-        [
-            "name",
-            "Date",
-            "class_name",
-            "dance_name",
-            "location",
-            "Start Time",
-            "End Time",
-            "Arrival Time",
-        ]
-    ]
-    student_rehearsals_data = student_rehearsals_data.rename(
-        columns={
-            "name": "Rehearsal/Performance",
-            "location": "Location",
-            "class_name": "Class",
-            "dance_name": "Dance Name",
-        }
-    )
-
-    student_rehearsals_data["Dance Name"] = student_rehearsals_data[
-        "Dance Name"
-    ].fillna("")
-
-    with open(os.path.join("student-schedules", f"{student}.md"), "w") as f:
-        f.write(f"# {student}\n\n")
-
-        # Write a section heading for the classes
-        f.write("## Classes\n\n")
-
-        # Create a table from the tabulate library
-        classes_table = tabulate(
-            student_classes_data, headers="keys", tablefmt="markdown", showindex=False
+        def _html_to_pdf(html_string: str, dest_path: str) -> None:
+            pdfkit.from_string(html_string, dest_path, options=_PDFKIT_OPTIONS)
+        PDF_BACKEND = "pdfkit"
+    except ImportError:
+        raise SystemExit(
+            "No PDF backend found. Install weasyprint:\n"
+            "    pip install weasyprint"
         )
 
-        # Write the classes table to the Markdown file
-        f.write(classes_table)
+# ── File & sheet names ─────────────────────────────────────────────────────
+SCHEDULE_FILE  = "input.xlsx"
+ROSTERS_FILE   = "class-rosters.xlsx"
 
-        f.write("\n\n")
+CLASSES_SHEET   = "classes"
+REHEARSALS_SHEET = "rehearsals"
+ROSTER_SHEET    = "roster"
 
-        # Write a section heading for the rehearsals
-        f.write("## Rehearsals & Performances\n\n")
+# ── Column names — input.xlsx "classes" ───────────────────────────────────
+CLS_CLASS     = "class_name"
+CLS_TEACHER   = "teacher"
+CLS_ASSISTANT = "assistant"
+CLS_DAY       = "day_of_week"
+CLS_TIME      = "time_of_day"
+CLS_COSTUME   = "costume"
 
-        # Create a table from the tabulate library
-        rehearsals_table = tabulate(
-            student_rehearsals_data,
-            headers="keys",
-            tablefmt="markdown",
-            showindex=False,
-            colalign=(
-                "left",
-                "left",
-                "left",
-                "left",
-                "left",
-                "right",
-                "right",
-                "right",
-            ),
+# ── Column names — input.xlsx "rehearsals" ────────────────────────────────
+RH_NAME       = "name"           # event type, e.g. "Technical Rehearsal"
+RH_DATE       = "date"           # e.g. "Sun, May 11"
+RH_LOCATION   = "location"
+RH_CLASS      = "class_name"
+RH_DANCE      = "dance_name"
+RH_START      = "start_time"
+RH_END        = "end_time"
+RH_ARRIVAL    = "arrival_time"
+RH_INFO       = "information"    # notes / extra info
+RH_URL        = "url"
+
+# ── Column names — class-rosters.xlsx "roster" ────────────────────────────
+RS_CLASS        = "class_name"
+RS_STUDENT      = "student"
+RS_DRESSING_RM  = "dressing_room"
+
+# ── Studio / show metadata ─────────────────────────────────────────────────
+STUDIO_NAME      = "Creative Dance & Fitness Studio"
+PERFORMANCE_NAME = "Spring Performance 2026"
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────
+
+def _str(val) -> str:
+    """Clean string, or '' for NaN / None."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return ""
+    return str(val).strip()
+
+
+def _fmt_time(val) -> str:
+    """Normalise a time value to H:MM AM/PM."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return ""
+    if hasattr(val, "strftime"):
+        return val.strftime("%-I:%M %p")
+    s = str(val).strip()
+    for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p", "%I:%M%p"):
+        try:
+            return datetime.strptime(s, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            pass
+    return s
+
+
+def _badge_class(event_name: str) -> str:
+    n = event_name.lower()
+    if "studio" in n:
+        return "pill-studio"
+    if "technical" in n:
+        return "pill-tech"
+    if "dress" in n:
+        return "pill-dress"
+    if "performance" in n:
+        return "pill-perf"
+    return "pill-studio"
+
+
+def _short_event(event_name: str) -> str:
+    mapping = {
+        "studio rehearsal":    "Studio Rehearsal",
+        "technical rehearsal": "Technical Rehearsal",
+        "dress rehearsal":     "Dress Rehearsal",
+        "performance":         "Performance",
+    }
+    return mapping.get(event_name.strip().lower(), event_name.strip())
+
+
+def _safe_filename(name: str) -> str:
+    return re.sub(r"[^\w\-]", "_", name.strip())
+
+
+def _parse_date(raw) -> tuple[str, str]:
+    """
+    Return (day_of_week_abbrev, "Month Day") from several input forms:
+      - datetime / Timestamp  →  ("SUN", "May 11")
+      - "Sun, May 11"         →  ("SUN", "May 11")
+      - "2025-05-11"          →  ("SUN", "May 11")
+      - "May 11"              →  ("",    "May 11")
+    """
+    # Excel / pandas may give us a datetime object directly
+    if hasattr(raw, "strftime"):
+        return raw.strftime("%a").upper(), raw.strftime("%b %-d")
+
+    s = str(raw).strip()
+
+    # Try parsing as an ISO date string
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"):
+        try:
+            dt = datetime.strptime(s, fmt)
+            return dt.strftime("%a").upper(), dt.strftime("%b %-d")
+        except ValueError:
+            pass
+
+    # "Sun, May 11" — split on first comma
+    if "," in s:
+        day, rest = s.split(",", 1)
+        rest = rest.strip()
+        # Try to parse rest as a full date to normalise it
+        for fmt in ("%B %d", "%b %d", "%B %d %Y", "%b %d %Y"):
+            try:
+                dt = datetime.strptime(rest, fmt)
+                return day.strip().upper(), dt.strftime("%b %-d")
+            except ValueError:
+                pass
+        return day.strip().upper(), rest
+
+    return "", s
+
+
+# ── Data loading ───────────────────────────────────────────────────────────
+
+def load_classes(schedule_path: str) -> dict[str, dict]:
+    """Return {class_name: class_metadata_dict}."""
+    df = pd.read_excel(schedule_path, sheet_name=CLASSES_SHEET)
+    result: dict[str, dict] = {}
+    for _, row in df.iterrows():
+        name = _str(row.get(CLS_CLASS))
+        if not name:
+            continue
+        result[name] = {
+            "name":      name,
+            "teacher":   _str(row.get(CLS_TEACHER)),
+            "assistant": _str(row.get(CLS_ASSISTANT)),
+            "day":       _str(row.get(CLS_DAY)),
+            "time":      _fmt_time(row.get(CLS_TIME)),
+            "costume":   _str(row.get(CLS_COSTUME)),
+        }
+    return result
+
+
+def load_rehearsals(schedule_path: str) -> dict[str, list[dict]]:
+    """Return {class_name: [rehearsal_dict, ...]}."""
+    df = pd.read_excel(schedule_path, sheet_name=REHEARSALS_SHEET)
+
+    result: dict[str, list[dict]] = {}
+    for _, row in df.iterrows():
+        class_name = _str(row.get(RH_CLASS))
+        if not class_name:
+            continue
+
+        event_name = _str(row.get(RH_NAME))
+        raw_date   = row.get(RH_DATE)
+        day_of_week, date_display = _parse_date(raw_date)
+
+        # Build a proper datetime sort key so May 2 < May 10
+        sort_date = pd.NaT
+        if hasattr(raw_date, "strftime"):
+            sort_date = raw_date
+        else:
+            for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%B %d", "%b %d"):
+                try:
+                    sort_date = datetime.strptime(str(raw_date).split(",")[-1].strip(), fmt)
+                    break
+                except ValueError:
+                    pass
+
+        result.setdefault(class_name, []).append({
+            "event_type":   _short_event(event_name),
+            "badge_class":  _badge_class(event_name),
+            "date":         date_display,
+            "day_of_week":  day_of_week,
+            "location":     _str(row.get(RH_LOCATION)),
+            "dance_name":   _str(row.get(RH_DANCE)),
+            "start_time":   _fmt_time(row.get(RH_START)),
+            "end_time":     _fmt_time(row.get(RH_END)),
+            "arrival_time": _fmt_time(row.get(RH_ARRIVAL)),
+            "information":  _str(row.get(RH_INFO)),
+            "url":          _str(row.get(RH_URL)),
+            "_sort_date":   sort_date,
+            "_sort_start":  row.get(RH_START),
+        })
+    return result
+
+
+def load_rosters(rosters_path: str) -> dict[str, dict]:
+    """Return {student_name: {"classes": [...], "dressing_room": "..."}}}.
+
+    A student may appear on multiple rows; dressing_room is taken from the
+    first row where it is non-empty.
+    """
+    df = pd.read_excel(rosters_path, sheet_name=ROSTER_SHEET)
+    result: dict[str, dict] = {}
+    for _, row in df.iterrows():
+        student    = _str(row.get(RS_STUDENT))
+        class_name = _str(row.get(RS_CLASS))
+        if not student or not class_name:
+            continue
+        entry = result.setdefault(student, {"classes": [], "dressing_room": ""})
+        entry["classes"].append(class_name)
+        if not entry["dressing_room"]:
+            entry["dressing_room"] = _str(row.get(RS_DRESSING_RM))
+    return result
+
+
+# ── Per-student data assembly ──────────────────────────────────────────────
+
+def build_student_data(
+    student: str,
+    enrolled_classes: list[str],
+    all_classes: dict[str, dict],
+    all_rehearsals: dict[str, list[dict]],
+) -> tuple[list[dict], list[dict]]:
+    """
+    Returns (classes_list, rehearsals_list) for one student.
+
+    classes_list     — one entry per enrolled class
+    rehearsals_list  — all calls across all enrolled classes, in date order
+    """
+    classes = []
+    rehearsals = []
+
+    for class_name in enrolled_classes:
+        if class_name in all_classes:
+            classes.append(all_classes[class_name])
+        for r in all_rehearsals.get(class_name, []):
+            rehearsals.append({**r, "class_name": class_name})
+
+    # Sort by actual date then start time, handling NaT safely
+    def _sort_key(r):
+        d = r["_sort_date"]
+        s = r["_sort_start"]
+        # Convert to a comparable value; put NaT/None last
+        d_val = d if pd.notna(d) else datetime.max
+        s_val = s if (s is not None and pd.notna(s)) else datetime.max
+        return (d_val, s_val)
+
+    rehearsals.sort(key=_sort_key)
+
+    # Strip internal keys before handing to template
+    for r in rehearsals:
+        r.pop("_sort_date", None)
+        r.pop("_sort_start", None)
+
+    return classes, rehearsals
+
+
+# ── Main ───────────────────────────────────────────────────────────────────
+
+def generate_schedules(
+    schedule_path: str,
+    rosters_path:  str,
+    output_dir:    str,
+    template_dir:  str,
+) -> None:
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    env      = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template("schedule.html")
+
+    all_classes    = load_classes(schedule_path)
+    all_rehearsals = load_rehearsals(schedule_path)
+    rosters        = load_rosters(rosters_path)
+
+    print(f"PDF backend : {PDF_BACKEND}")
+    print(f"Classes     : {len(all_classes)}")
+    print(f"Students    : {len(rosters)}")
+    print(f"Output dir  : {output_path.resolve()}\n")
+
+    for student in sorted(rosters):
+        enrolled      = rosters[student]["classes"]
+        dressing_room = rosters[student]["dressing_room"]
+        classes, rehearsals = build_student_data(
+            student, enrolled, all_classes, all_rehearsals
         )
 
-        # Write the rehearsals table to the Markdown file
-        f.write(rehearsals_table)
+        html = template.render(
+            student_name     = student,
+            studio_name      = STUDIO_NAME,
+            performance_name = PERFORMANCE_NAME,
+            generated_date   = datetime.today().strftime("%B %-d, %Y"),
+            classes          = classes,
+            rehearsals       = rehearsals,
+            dressing_room    = dressing_room,
+        )
+
+        dest = output_path / f"{_safe_filename(student)}.pdf"
+        _html_to_pdf(html, str(dest))
+        print(f"  ✓  {student:30s}  ({len(rehearsals):2d} calls)  →  {dest.name}")
+
+    print(f"\nDone — {len(rosters)} PDF(s) written to {output_path.resolve()}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Generate per-student rehearsal PDFs from roster + schedule data."
+    )
+    parser.add_argument("--schedule",    default=SCHEDULE_FILE, help="Path to input.xlsx")
+    parser.add_argument("--rosters",     default=ROSTERS_FILE,  help="Path to class-rosters.xlsx")
+    parser.add_argument("--output-dir",  default="student-schedules/",     help="Directory to write PDFs")
+    parser.add_argument("--templates",   default="templates/",  help="Directory with schedule.html")
+    args = parser.parse_args()
+
+    generate_schedules(args.schedule, args.rosters, args.output_dir, args.templates)

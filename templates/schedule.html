@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ student_name }} — Rehearsal &amp; Performance Schedule</title>
+  <style>
+    /*
+     * Color palette drawn from cdandfs.com:
+     *   Charcoal   #1c1c1c  — primary text / header bar
+     *   Off-white  #f7f5f2  — warm page/row background
+     *   Mid-gray   #6b6b6b  — secondary labels, muted text
+     *   Rule gray  #d4d0cb  — borders, dividers
+     *
+     * Pill accent colors (choreographed to feel like stage lighting):
+     *   Technical  — deep slate blue  #2e4a6b / #dce8f5
+     *   Dress      — amber/gold       #7a5100 / #fdf0d0
+     *   Performance — forest green    #1e5c3a / #d5ede0
+     *   Arrival    — warm brick red   #8b2a2a  (attention, not alarming)
+     */
+
+    @page {
+      size: letter landscape;
+      margin: 0.45in 0.55in 0.42in 0.55in;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 9.5pt;
+      color: #1c1c1c;
+      background: #fff;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 2.5px solid #1c1c1c;
+      padding-bottom: 7px;
+      margin-bottom: 10px;
+    }
+    .studio-block { line-height: 1.3; }
+    .studio-name {
+      font-size: 11pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1c1c1c;
+    }
+    .studio-sub {
+      font-size: 7.5pt;
+      color: #6b6b6b;
+      letter-spacing: 0.04em;
+    }
+    .header-center { text-align: center; }
+    .header-center h1 {
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #1c1c1c;
+    }
+    .header-center .show-name {
+      font-size: 9pt;
+      color: #6b6b6b;
+      margin-top: 2px;
+      font-style: italic;
+    }
+    .header-right {
+      text-align: right;
+      font-size: 8pt;
+      color: #6b6b6b;
+      line-height: 1.6;
+    }
+    .dressing-room-box {
+      display: inline-block;
+      border: 2px solid #1c1c1c;
+      border-radius: 4px;
+      padding: 4px 10px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .dressing-room-label {
+      font-size: 7.5pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b6b6b;
+    }
+    .dressing-room-value {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1c1c1c;
+      line-height: 1.2;
+    }
+    .header-meta {
+      font-size: 7.5pt;
+      color: #6b6b6b;
+      margin-top: 2px;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #6b6b6b;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      margin-bottom: 5px;
+      border-bottom: 1px solid #d4d0cb;
+      padding-bottom: 3px;
+    }
+
+    /* ── Enrolled classes strip ── */
+    .classes-bar {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 11px;
+      flex-wrap: wrap;
+    }
+    .class-chip {
+      background: #f7f5f2;
+      border: 1px solid #d4d0cb;
+      border-left: 3px solid #1c1c1c;
+      border-radius: 0 4px 4px 0;
+      padding: 5px 10px;
+      font-size: 8.5pt;
+      line-height: 1.5;
+    }
+    .chip-name    { font-weight: 700; color: #1c1c1c; }
+    .chip-detail  { color: #6b6b6b; font-size: 8pt; }
+    .chip-costume {
+      color: #4a4a4a;
+      font-size: 7.5pt;
+      margin-top: 1px;
+    }
+    .chip-costume::before { content: "Costume: "; font-weight: 600; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 8.7pt; }
+
+    thead tr { background: #1c1c1c; }
+    thead th {
+      padding: 5px 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 7.5pt;
+      color: #fff;
+      white-space: nowrap;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    tbody tr { border-bottom: 1px solid #e8e5e0; }
+    tbody tr:nth-child(even) { background: #f7f5f2; }
+    tbody td { padding: 5px 8px; vertical-align: middle; line-height: 1.3; }
+
+    /* Event type pill */
+    .event-pill {
+      display: inline-block;
+      border-radius: 2px;
+      padding: 2px 7px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      white-space: nowrap;
+      text-decoration: none;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+    }
+    a.event-pill:hover { opacity: 0.85; }
+    .pill-studio { background: #ede8f5; color: #3d2270; border: 1px solid #bfaee0; }
+    .pill-tech   { background: #dce8f5; color: #2e4a6b; border: 1px solid #a8c4e0; }
+    .pill-dress  { background: #fdf0d0; color: #7a5100; border: 1px solid #e8cc80; }
+    .pill-perf   { background: #d5ede0; color: #1e5c3a; border: 1px solid #8ecaaa; }
+
+    /* Day-of-week pill */
+    .day-pill {
+      display: inline-block;
+      background: #1c1c1c;
+      color: #fff;
+      border-radius: 2px;
+      padding: 1px 5px;
+      font-size: 7pt;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    /* Info pill (notes/information column) */
+    .info-pill {
+      display: inline-block;
+      background: #f0ece6;
+      color: #4a4a4a;
+      border-radius: 2px;
+      border: 1px solid #d4d0cb;
+      padding: 1px 6px;
+      font-size: 7.5pt;
+      white-space: normal;
+      word-wrap: break-word;
+    }
+    .notes-cell {
+      max-width: 120px;
+      word-wrap: break-word;
+    }
+
+    /* Arrival — most important, brick red, bold */
+    .arrival     { font-weight: 700; color: #8b2a2a; white-space: nowrap; }
+    .time-cell   { white-space: nowrap; }
+    .dance-name  { font-style: italic; color: #3a3a3a; }
+    .class-name  { font-weight: 600; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 9px;
+      padding-top: 6px;
+      border-top: 1px solid #d4d0cb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5pt;
+      color: #6b6b6b;
+    }
+    .footer-note { font-style: italic; }
+    .legend      { display: flex; gap: 8px; align-items: center; }
+    .legend-arrival { font-weight: 700; color: #8b2a2a; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="studio-block">
+      <div class="studio-name">CD&amp;FS</div>
+      <div class="studio-sub">Contemporary Dance &amp; Fitness Studio</div>
+    </div>
+    <div class="header-center">
+      <h1>{{ student_name }}</h1>
+      <div class="show-name">{{ performance_name }}</div>
+    </div>
+    <div class="header-right">
+      {% if dressing_room %}
+      <div class="dressing-room-box">
+        <div class="dressing-room-label">Barre Opera House Performance</div>
+        <div class="dressing-room-value">Assignment: {{ dressing_room }}</div>
+      </div>
+      {% endif %}
+      <div class="header-meta">Generated {{ generated_date }}</div>
+    </div>
+  </div>
+
+  <!-- Enrolled classes -->
+  {% if classes %}
+  <div class="section-label">Enrolled Classes</div>
+  <div class="classes-bar">
+    {% for c in classes %}
+    <div class="class-chip">
+      <div>
+        <span class="chip-name">{{ c.name }}</span>
+        <span class="chip-detail"> &mdash; {{ c.teacher }}{% if c.assistant %} &amp; {{ c.assistant }}{% endif %} &middot; {{ c.day }}s {{ c.time }}</span>
+      </div>
+      {% if c.costume %}<div class="chip-costume">{{ c.costume }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Schedule table -->
+  <div class="section-label">Rehearsals &amp; Performances &mdash; {{ rehearsals | length }} calls</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:10%">Event</th>
+        <th style="width:14%">Class</th>
+        <th style="width:9%">Date</th>
+        <th style="width:4%">Day</th>
+        <th style="width:9%">&#9873; Arrive By</th>
+        <th style="width:8%">Start</th>
+        <th style="width:7%">End</th>
+        <th style="width:13%">Location</th>
+        <th style="width:17%">Dance / Number</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rehearsals %}
+      <tr>
+        <td>
+          {% if r.url %}
+            <a href="{{ r.url }}" class="event-pill {{ r.badge_class }}">{{ r.event_type }}</a>
+          {% else %}
+            <span class="event-pill {{ r.badge_class }}">{{ r.event_type }}</span>
+          {% endif %}
+        </td>
+        <td class="class-name">{{ r.class_name }}</td>
+        <td>{{ r.date }}</td>
+        <td><span class="day-pill">{{ r.day_of_week }}</span></td>
+         <td class="arrival">{{ r.arrival_time }}</td>
+        <td class="time-cell">{{ r.start_time }}</td>
+        <td class="time-cell">{{ r.end_time }}</td>
+        <td>{{ r.location }}</td>
+        <td class="dance-name">{{ r.dance_name }}</td>
+        <td class="notes-cell">{% if r.information %}<span class="info-pill">{{ r.information }}</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
