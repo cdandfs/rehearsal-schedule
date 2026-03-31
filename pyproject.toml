@@ -3,7 +3,7 @@ name = "rehearsal-schedule"
 version = "0.1.0"
 description = "Streamlit application for CD&F Studio May Performance/Rehearsal Helper"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.9"
 dependencies = [
     "jinja2>=3.1.6",
     "openpyxl>=3.1.5",
