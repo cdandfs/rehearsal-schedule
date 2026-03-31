@@ -41,8 +41,8 @@ if class_name:
                     "assistant": "Assistant",
                     "day_of_week": "Class Day of Week",
                     "time_of_day": "Class Time",
-                    "costume": "Costume Information",
-                    "dressing_room": "Dressing Room Assignment"
+                    "cdfs_costume": "CD&FS Costume Pieces",
+                    "student_costume": "Costume Pieces Provided By Student",
                 }
             ),
             use_container_width=True,
