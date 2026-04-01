@@ -58,7 +58,7 @@ if class_name:
                     "cdfs_costume": "Costume Information",
                     "student_costume": "Pieces provided by student",
                     "dressing_room": "Dressing Room Assignment",
-                })
+                }).fillna("")
             ),
             unsafe_allow_html=True,
         )
