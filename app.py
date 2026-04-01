@@ -26,7 +26,8 @@ if class_name:
     classes_match["time_of_day"] = classes_match["time_of_day"].apply(
         lambda x: x.strftime("%I:%M %p") if pd.notnull(x) else ""
     )
-    classes_match["teacher"] = classes_match["teacher"] if pd.notnull(x) else ""
+    classes_match["teacher"] = classes_match["teacher"].apply(if pd.notnull(x) else ""
+    )
     rehearsals_match = rehearsals_data[
         rehearsals_data["class_name"].str.fullmatch(class_name, case=False)
     ]
