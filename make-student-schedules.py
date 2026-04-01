@@ -93,6 +93,7 @@ RH_URL        = "url"
 # ── Column names — class-rosters.xlsx "roster" ────────────────────────────
 RS_CLASS             = "class_name"
 RS_STUDENT           = "student"
+RS_DRESSING_KIDS     = "dressing_room_kids"
 RS_DRESSING_BALLET   = "dressing_room_ballet"
 RS_DRESSING_TEENADULT = "dressing_room_teenadult"
 RS_DRESSING_MATINEE  = "dressing_room_matinee"
@@ -260,6 +261,7 @@ def load_rosters(rosters_path: str) -> dict[str, dict]:
     """Return {student_name: {"classes": [...], "dressing_rooms": {...}}}.
 
     dressing_rooms contains:
+        kids      - dressing_room_kids value
         ballet    — dressing_room_ballet value
         teenadult — dressing_room_teenadult value
         matinee   — dressing_room_matinee value
@@ -277,10 +279,12 @@ def load_rosters(rosters_path: str) -> dict[str, dict]:
             continue
         entry = result.setdefault(student, {
             "classes": [],
-            "dressing_rooms": {"ballet": "", "teenadult": "", "matinee": ""},
+            "dressing_rooms": {"kids": "", "ballet": "", "teenadult": "", "matinee": ""},
         })
         entry["classes"].append(class_name)
         rooms = entry["dressing_rooms"]
+        if not rooms["kids"]:
+            rooms["kids"]      = _str(row.get(RS_DRESSING_KIDS))
         if not rooms["ballet"]:
             rooms["ballet"]    = _str(row.get(RS_DRESSING_BALLET))
         if not rooms["teenadult"]:

@@ -251,11 +251,17 @@
       <div class="show-name">{{ performance_name }}</div>
     </div>
     <div class="header-right">
-      {% set any_room = dressing_rooms.ballet or dressing_rooms.teenadult or dressing_rooms.matinee %}
+      {% set any_room = dressing_rooms.kids or dressing_rooms.ballet or dressing_rooms.teenadult or dressing_rooms.matinee %}
       {% if any_room %}
         {% if dressing_rooms.differ %}
         <!-- Three rooms differ — show one labeled box per non-empty assignment -->
         <div class="dressing-room-boxes">
+          {% if dressing_rooms.kids %}
+          <div class="dressing-room-box">
+            <div class="dressing-room-label">Kids Half</div>
+            <div class="dressing-room-value-small">{{ dressing_rooms.kids }}</div>
+          </div>
+          {% endif %}
           {% if dressing_rooms.ballet %}
           <div class="dressing-room-box">
             <div class="dressing-room-label">Ballet Half</div>
@@ -279,7 +285,7 @@
         <!-- All rooms the same — show one unlabeled box -->
         <div class="dressing-room-box">
           <div class="dressing-room-label">Barre Opera House Dressing Room</div>
-          <div class="dressing-room-value">{{ dressing_rooms.ballet or dressing_rooms.teenadult or dressing_rooms.matinee }}</div>
+          <div class="dressing-room-value">{{dressing_rooms.kids or dressing_rooms.ballet or dressing_rooms.teenadult or dressing_rooms.matinee }}</div>
         </div>
         {% endif %}
       {% endif %}
