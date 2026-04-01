@@ -33,20 +33,33 @@ if class_name:
     # Display classes data
     if not classes_match.empty:
         st.write("### Class Information:")
-        st.dataframe(
-            classes_match.rename(
-                columns={
-                    "class_name": "Class Name",
-                    "teacher": "Teacher",
-                    "assistant": "Assistant",
-                    "day_of_week": "Class Day of Week",
-                    "time_of_day": "Class Time",
-                    "costume": "Costume Information",
-                    "dressing_room": "Dressing Room Assignment"
-                }
+
+        def df_to_html(df):
+            return (
+                "<style>"
+                "table.cdfs { width:100%; border-collapse:collapse; font-size:0.88rem; }"
+                "table.cdfs th { background:#1c1c1c; color:#fff; padding:6px 10px;"
+                "  text-align:left; font-weight:600; white-space:nowrap; }"
+                "table.cdfs td { padding:6px 10px; border-bottom:1px solid #e0e0e0;"
+                "  vertical-align:top; white-space:normal; word-wrap:break-word; }"
+                "table.cdfs tr:nth-child(even) td { background:#f7f5f2; }"
+                "</style>"
+                + df.to_html(index=False, classes="cdfs", border=0)
+            )
+
+        st.markdown(
+            df_to_html(
+                classes_match.rename(columns={
+                    "class_name":    "Class Name",
+                    "teacher":       "Teacher",
+                    "assistant":     "Assistant",
+                    "day_of_week":   "Class Day of Week",
+                    "time_of_day":   "Class Time",
+                    "costume":       "Costume Information",
+                    "dressing_room": "Dressing Room Assignment",
+                })
             ),
-            use_container_width=True,
-            hide_index=True,
+            unsafe_allow_html=True,
         )
 
     # Display rehearsals data with download buttons
@@ -105,11 +118,10 @@ if class_name:
         )
         rehearsals_table["Information"] = rehearsals_table["Information"].fillna("")
         rehearsals_table["Rehearsal/Performance"] = rehearsals_table["Rehearsal/Performance"].fillna("")
-        rehearsals_table.style.set_properties(**{"white-space": "pre-wrap"})
 
         st.write("##### Rehearsal & Performance Schedule as a Table:")
-        st.dataframe(rehearsals_table, use_container_width=True, hide_index=True)
-        # st.markdown(rehearsals_table.to_markdown(index=False))
+        st.markdown(df_to_html(rehearsals_table), unsafe_allow_html=True)
+
         st.write("##### Rehearsal & Performance Schedule as a List:")
         for index, row in rehearsals_table.iterrows():
             st.write(f"**{row['Rehearsal/Performance']}**")
