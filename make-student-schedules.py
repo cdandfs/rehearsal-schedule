@@ -91,9 +91,11 @@ RH_INFO       = "information"    # notes / extra info
 RH_URL        = "url"
 
 # ── Column names — class-rosters.xlsx "roster" ────────────────────────────
-RS_CLASS        = "class_name"
-RS_STUDENT      = "student"
-RS_DRESSING_RM  = "dressing_room"
+RS_CLASS             = "class_name"
+RS_STUDENT           = "student"
+RS_DRESSING_BALLET   = "dressing_room_ballet"
+RS_DRESSING_TEENADULT = "dressing_room_teenadult"
+RS_DRESSING_MATINEE  = "dressing_room_matinee"
 
 # ── Studio / show metadata ─────────────────────────────────────────────────
 STUDIO_NAME      = "Creative Dance & Fitness Studio"
@@ -255,10 +257,16 @@ def load_rehearsals(schedule_path: str) -> dict[str, list[dict]]:
 
 
 def load_rosters(rosters_path: str) -> dict[str, dict]:
-    """Return {student_name: {"classes": [...], "dressing_room": "..."}}}.
+    """Return {student_name: {"classes": [...], "dressing_rooms": {...}}}.
 
-    A student may appear on multiple rows; dressing_room is taken from the
-    first row where it is non-empty.
+    dressing_rooms contains:
+        ballet    — dressing_room_ballet value
+        teenadult — dressing_room_teenadult value
+        matinee   — dressing_room_matinee value
+        differ    — True if any non-empty values differ from each other
+
+    A student may appear on multiple rows; the first non-empty value for each
+    room column is used.
     """
     df = pd.read_excel(rosters_path, sheet_name=ROSTER_SHEET)
     result: dict[str, dict] = {}
@@ -267,10 +275,25 @@ def load_rosters(rosters_path: str) -> dict[str, dict]:
         class_name = _str(row.get(RS_CLASS))
         if not student or not class_name:
             continue
-        entry = result.setdefault(student, {"classes": [], "dressing_room": ""})
+        entry = result.setdefault(student, {
+            "classes": [],
+            "dressing_rooms": {"ballet": "", "teenadult": "", "matinee": ""},
+        })
         entry["classes"].append(class_name)
-        if not entry["dressing_room"]:
-            entry["dressing_room"] = _str(row.get(RS_DRESSING_RM))
+        rooms = entry["dressing_rooms"]
+        if not rooms["ballet"]:
+            rooms["ballet"]    = _str(row.get(RS_DRESSING_BALLET))
+        if not rooms["teenadult"]:
+            rooms["teenadult"] = _str(row.get(RS_DRESSING_TEENADULT))
+        if not rooms["matinee"]:
+            rooms["matinee"]   = _str(row.get(RS_DRESSING_MATINEE))
+
+    # Compute whether the non-empty room values differ
+    for entry in result.values():
+        rooms = entry["dressing_rooms"]
+        non_empty = {v for v in rooms.values() if v}
+        rooms["differ"] = len(non_empty) > 1
+
     return result
 
 
@@ -341,7 +364,7 @@ def generate_schedules(
 
     for student in sorted(rosters):
         enrolled      = rosters[student]["classes"]
-        dressing_room = rosters[student]["dressing_room"]
+        dressing_rooms = rosters[student]["dressing_rooms"]
         classes, rehearsals = build_student_data(
             student, enrolled, all_classes, all_rehearsals
         )
@@ -353,7 +376,7 @@ def generate_schedules(
             generated_date   = datetime.today().strftime("%B %-d, %Y"),
             classes          = classes,
             rehearsals       = rehearsals,
-            dressing_room    = dressing_room,
+            dressing_rooms   = dressing_rooms,
         )
 
         dest = output_path / f"{_safe_filename(student)}.pdf"
@@ -369,7 +392,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--schedule",    default=SCHEDULE_FILE, help="Path to input.xlsx")
     parser.add_argument("--rosters",     default=ROSTERS_FILE,  help="Path to class-rosters.xlsx")
-    parser.add_argument("--output-dir",  default="student-schedules/",     help="Directory to write PDFs")
+    parser.add_argument("--output-dir",  default="student-schedules/", help="Directory to write PDFs")
     parser.add_argument("--templates",   default="templates/",  help="Directory with schedule.html")
     args = parser.parse_args()
 
