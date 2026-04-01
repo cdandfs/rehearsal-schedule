@@ -55,7 +55,8 @@ if class_name:
                     "assistant":     "Assistant",
                     "day_of_week":   "Class Day of Week",
                     "time_of_day":   "Class Time",
-                    "costume":       "Costume Information",
+                    "cdfs_costume": "Costume Information",
+                    "student_costume": "Pieces provided by student",
                     "dressing_room": "Dressing Room Assignment",
                 })
             ),
