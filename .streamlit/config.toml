@@ -1,5 +1,5 @@
 [theme]
 backgroundColor="#edc7b7"
-secondaryBackgroundColor="#ffffff"
+secondaryBackgroundColor="#f0e2dd"
 textColor="#ac3b61"
-font="Montserrat:https://fonts.googleapis.com/css2?family=Montserrat&display=swap"
+font = "Montserrat:https://fonts.googleapis.com/css2?family=Montserrat&display=swap"
