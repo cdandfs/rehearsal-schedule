@@ -12,7 +12,7 @@ classes_data = pd.read_excel("input.xlsx", sheet_name="classes")
 rehearsals_data = pd.read_excel("input.xlsx", sheet_name="rehearsals")
 
 # Main app
-st.title("CDF&S May Rehearsals and Performances")
+st.title("CD&FS May Rehearsals and Performances")
 
 # Get user input for class name
 class_name_list = classes_data["class_name"].unique()
@@ -52,7 +52,7 @@ if class_name:
     # Display rehearsals data with download buttons
     if not rehearsals_match.empty:
         st.write("### Rehearsal and Performance Information:")
-        st.write("##### Links to CDF&S Website Rehearsal Information:")
+        st.write("##### Links to CD&FS Website Rehearsal Information:")
         st.write(
             "\t [Information for Technical Rehearsal](https://www.cdandfs.com/tech-rehearsals.html)"
         )
