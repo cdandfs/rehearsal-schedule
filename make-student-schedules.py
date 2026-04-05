@@ -204,7 +204,6 @@ def load_classes(schedule_path: str) -> dict[str, dict]:
         if not name:
             continue
         result[name] = {
-            "name":      name,
             "name":            name,
             "teacher":         _str(row.get(CLS_TEACHER)),
             "assistant":       _str(row.get(CLS_ASSISTANT)),
