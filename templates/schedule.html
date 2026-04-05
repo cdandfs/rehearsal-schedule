@@ -145,9 +145,9 @@
     .chip-costume {
       color: #4a4a4a;
       font-size: 7.5pt;
-      margin-top: 1px;
+      margin-top: 2px;
     }
-    .chip-costume::before { content: "Costume: "; font-weight: 600; }
+    .chip-costume-label { font-weight: 600; }
 
     /* ── Table ── */
     table { width: 100%; border-collapse: collapse; font-size: 8.7pt; }
@@ -212,7 +212,7 @@
       word-wrap: break-word;
     }
     .notes-cell {
-      max-width: 120px;
+      max-width: 160px;
       word-wrap: break-word;
     }
 
@@ -284,7 +284,7 @@
         {% else %}
         <!-- All rooms the same — show one unlabeled box -->
         <div class="dressing-room-box">
-          <div class="dressing-room-label">Barre Opera House Dressing Room</div>
+          <div class="dressing-room-label">Barre Opera House</div>
           <div class="dressing-room-value">{{dressing_rooms.kids or dressing_rooms.ballet or dressing_rooms.teenadult or dressing_rooms.matinee }}</div>
         </div>
         {% endif %}
@@ -303,7 +303,12 @@
         <span class="chip-name">{{ c.name }}</span>
         <span class="chip-detail"> &mdash; {{ c.teacher }}{% if c.assistant %} &amp; {{ c.assistant }}{% endif %} &middot; {{ c.day }}s {{ c.time }}</span>
       </div>
-      {% if c.costume %}<div class="chip-costume">{{ c.costume }}</div>{% endif %}
+      {% if c.cdfs_costume %}
+      <div class="chip-costume"><span class="chip-costume-label">CD&amp;FS Costume:</span> {{ c.cdfs_costume }}</div>
+      {% endif %}
+      {% if c.student_costume %}
+      <div class="chip-costume"><span class="chip-costume-label">Student Costume:</span> {{ c.student_costume }}</div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -314,16 +319,16 @@
   <table>
     <thead>
       <tr>
-        <th style="width:10%">Event</th>
-        <th style="width:9%">Date</th>
+        <th style="width:9%">Event</th>
+        <th style="width:8%">Date</th>
         <th style="width:4%">Day</th>
         <th style="width:10%">Class</th>
-        <th style="width:17%">Dance / Number</th>
+        <th style="width:10%">Dance</th>
         <th style="width:13%">Location</th>
         <th style="width:6%">Start</th>
         <th style="width:6%">End</th>
         <th style="width:6%">&#9873; Arrive By</th>
-        <th style="width:19%">Notes</th>
+        <th style="width:28%">Notes</th>
       </tr>
     </thead>
     <tbody>

@@ -71,12 +71,13 @@ REHEARSALS_SHEET = "rehearsals"
 ROSTER_SHEET    = "roster"
 
 # ── Column names — input.xlsx "classes" ───────────────────────────────────
-CLS_CLASS     = "class_name"
-CLS_TEACHER   = "teacher"
-CLS_ASSISTANT = "assistant"
-CLS_DAY       = "day_of_week"
-CLS_TIME      = "time_of_day"
-CLS_COSTUME   = "costume"
+CLS_CLASS          = "class_name"
+CLS_TEACHER        = "teacher"
+CLS_ASSISTANT      = "assistant"
+CLS_DAY            = "day_of_week"
+CLS_TIME           = "time_of_day"
+CLS_CDFS_COSTUME   = "cdfs_costume"
+CLS_STUDENT_COSTUME = "student_costume"
 
 # ── Column names — input.xlsx "rehearsals" ────────────────────────────────
 RH_NAME       = "name"           # event type, e.g. "Technical Rehearsal"
@@ -204,11 +205,13 @@ def load_classes(schedule_path: str) -> dict[str, dict]:
             continue
         result[name] = {
             "name":      name,
-            "teacher":   _str(row.get(CLS_TEACHER)),
-            "assistant": _str(row.get(CLS_ASSISTANT)),
-            "day":       _str(row.get(CLS_DAY)),
-            "time":      _fmt_time(row.get(CLS_TIME)),
-            "costume":   _str(row.get(CLS_COSTUME)),
+            "name":            name,
+            "teacher":         _str(row.get(CLS_TEACHER)),
+            "assistant":       _str(row.get(CLS_ASSISTANT)),
+            "day":             _str(row.get(CLS_DAY)),
+            "time":            _fmt_time(row.get(CLS_TIME)),
+            "cdfs_costume":    _str(row.get(CLS_CDFS_COSTUME)),
+            "student_costume": _str(row.get(CLS_STUDENT_COSTUME)),
         }
     return result
 
@@ -396,7 +399,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--schedule",    default=SCHEDULE_FILE, help="Path to input.xlsx")
     parser.add_argument("--rosters",     default=ROSTERS_FILE,  help="Path to class-rosters.xlsx")
-    parser.add_argument("--output-dir",  default="student-schedules/", help="Directory to write PDFs")
+    parser.add_argument("--output-dir",  default="student-schedules/",     help="Directory to write PDFs")
     parser.add_argument("--templates",   default="templates/",  help="Directory with schedule.html")
     args = parser.parse_args()
 
