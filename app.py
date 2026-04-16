@@ -55,8 +55,8 @@ if class_name:
                     "assistant":     "Assistant",
                     "day_of_week":   "Class Day of Week",
                     "time_of_day":   "Class Time",
-                    "cdfs_costume": "CD&FS Costume Pieces",
-                    "student_costume": "Costume Pieces Provided By Student",
+                    "cdfs_costume": "CD&FS-provided Costume Pieces",
+                    "student_costume": "Student-provided Costume Pieces",
                 }).fillna("")
             ),
             unsafe_allow_html=True,

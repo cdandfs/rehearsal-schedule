@@ -304,10 +304,10 @@
         <span class="chip-detail"> &mdash; {{ c.teacher }}{% if c.assistant %} &amp; {{ c.assistant }}{% endif %} &middot; {{ c.day }}s {{ c.time }}</span>
       </div>
       {% if c.cdfs_costume %}
-      <div class="chip-costume"><span class="chip-costume-label">CD&amp;FS Costume:</span> {{ c.cdfs_costume }}</div>
+      <div class="chip-costume"><span class="chip-costume-label">CD&amp;FS-provided Costume:</span> {{ c.cdfs_costume }}</div>
       {% endif %}
       {% if c.student_costume %}
-      <div class="chip-costume"><span class="chip-costume-label">Student Costume:</span> {{ c.student_costume }}</div>
+      <div class="chip-costume"><span class="chip-costume-label">Student-provided Costume:</span> {{ c.student_costume }}</div>
       {% endif %}
     </div>
     {% endfor %}
